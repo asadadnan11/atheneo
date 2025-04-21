@@ -1,5 +1,4 @@
 # Model files
-models/
 *.safetensors
 *.pt
 *.bin
