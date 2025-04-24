@@ -1,4 +1,4 @@
-# Atheneo: AI-Powered Sports Betting Insights
+# Atheneo: AI-Powered Sportbooks Insights
 
 ## Overview
 Atheneo is a comprehensive system that combines Reddit sentiment analysis with betting market data to identify potential betting opportunities. It processes social media signals, matches them with market gaps, and generates actionable insights using advanced sportsbook metrics. The system includes a Streamlit app for visualizing insights and sentiment analysis.
