@@ -1,13 +1,13 @@
 # WhisperBet: AI-Powered Sports Betting Insights
 
 ## Overview
-WhisperBet is a comprehensive system that combines Reddit sentiment analysis with betting market data to identify potential betting opportunities. It processes social media signals, matches them with betting odds, and generates actionable insights using advanced betting metrics. The system includes a Streamlit app for visualizing insights and sentiment analysis.
+Atheneo is a comprehensive system that combines Reddit sentiment analysis with betting market data to identify potential betting opportunities. It processes social media signals, matches them with market gaps, and generates actionable insights using advanced sportsbook metrics. The system includes a Streamlit app for visualizing insights and sentiment analysis.
 
 ## Features
 
 ### 1. Real-time Betting Insights Dashboard
 - **Overview Metrics**: Total signals, active matches, and confidence scores
-- **Sentiment Distribution**: Visual breakdown of betting sentiment (strongly positive to strongly negative)
+- **Sentiment Distribution**: Visual breakdown of soccer realted sentiments on subreddits (strongly positive to strongly negative)
 - **Team Analysis**: Track trending teams and market sentiment
 - **Latest Tips**: Real-time betting recommendations with match details
 
@@ -30,7 +30,7 @@ WhisperBet is a comprehensive system that combines Reddit sentiment analysis wit
 
 ### 4. Data Collection & Processing
 - **Reddit Integration**: 
-  - Monitors key subreddits for betting signals
+  - Monitors key subreddits for sportsbook lines signals
   - Tracks team news, injuries, and lineups
   - Filters relevant betting discussions
 - **Signal Processing**:
