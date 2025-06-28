@@ -76,7 +76,7 @@ with open(history_file, 'w') as f:
 # Clean up old files
 cleanup_old_files()
 
-print(f"✅ Saved {len(all_odds)} total match odds to:")
-print(f"📄 Current: {current_file}")
-print(f"📄 History: {history_file}")
+print(f"Saved {len(all_odds)} total match odds to:")
+print(f"Current: {current_file}")
+print(f"History: {history_file}")
 

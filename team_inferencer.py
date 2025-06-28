@@ -15,7 +15,7 @@ def infer_team_from_text(text):
 reddit_dir = Path("data")
 reddit_files = sorted(reddit_dir.glob("matches_*.json"))
 latest_file = reddit_files[-1]
-print(f"📄 Enriching file: {latest_file.name}")
+print(f"Enriching file: {latest_file.name}")
 
 # Load data
 with open(latest_file, "r") as f:
@@ -35,4 +35,4 @@ enriched_file = reddit_dir / f"matches_enriched_{timestamp}.json"
 with open(enriched_file, "w") as f:
     json.dump(posts, f, indent=2)
 
-print(f"✅ Enriched posts saved to: {enriched_file}")
+print(f"Enriched posts saved to: {enriched_file}")

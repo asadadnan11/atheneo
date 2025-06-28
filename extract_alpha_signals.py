@@ -14,19 +14,19 @@ def parse_gpt_analysis(raw):
             if match:
                 return json.loads(match.group(0))
         except Exception as e:
-            print("⚠️ Error parsing GPT analysis:", e)
+            print("Error parsing GPT analysis:", e)
     return {"analysis": str(raw), "confidence": "LOW"}
 
 # Load latest GPT results
 data_dir = Path("data")
 gpt_files = sorted(data_dir.glob("gpt_insights_*.json"))
 if not gpt_files:
-    raise FileNotFoundError("❌ No gpt_insights_*.json file found in data/")
+    raise FileNotFoundError("No gpt_insights_*.json file found in data/")
 
 with open(gpt_files[-1]) as f:
     data = json.load(f)
 
-print(f"📦 Loaded {len(data)} GPT-insight items from {gpt_files[-1].name}")
+print(f"Loaded {len(data)} GPT-insight items from {gpt_files[-1].name}")
 
 # Filter for high/medium confidence signals
 from gpt_signal_matcher import generate_bet_recommendation  # Import the function if needed
@@ -65,5 +65,5 @@ alpha_out_path = data_dir / f"gpt_alpha_signals_{datetime.now().strftime('%Y%m%d
 with open(alpha_out_path, "w") as f:
     json.dump(filtered, f, indent=2)
 
-print(f"✅ Saved summary to {summary_path}")
-print(f"✅ Saved {len(filtered)} alpha signals to {alpha_out_path.resolve()}")
+print(f"Saved summary to {summary_path}")
+print(f"Saved {len(filtered)} alpha signals to {alpha_out_path.resolve()}")

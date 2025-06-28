@@ -471,7 +471,7 @@ def display_tweets(tweets: List[Dict]):
         st.info("No tweets available")
         return
         
-    st.subheader("Latest Betting Tips 🎯")
+    st.subheader("Latest Betting Tips")
     
     for tweet in tweets[:5]:  # Display latest 5 tweets
         try:
@@ -502,7 +502,7 @@ def display_tweets(tweets: List[Dict]):
             continue
 
 def main():
-    st.title("WhisperBet Insights 🎲")
+    st.title("WhisperBet Insights")
     
     # Initialize data loader
     data_loader = DataLoader()
@@ -520,7 +520,7 @@ def main():
         all_signals.extend(tweets)
     
     # Create tabs
-    tab1, tab2, tab3 = st.tabs(["Overview 📊", "Analysis 📈", "Tweets 🐦"])
+    tab1, tab2, tab3 = st.tabs(["Overview", "Analysis", "Tweets"])
     
     with tab1:
         st.header("Overview")

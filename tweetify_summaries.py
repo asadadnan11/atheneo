@@ -27,7 +27,7 @@ class TweetifySummaries:
             # Allow matches up to 7 days in the future
             return match_time > current_time and (match_time - current_time).days <= 7
         except Exception as e:
-            print(f"❌ Error checking match time: {e}")
+            print(f"Error checking match time: {e}")
             return False
     
     def generate_tweets(self, signals_input):
@@ -36,7 +36,7 @@ class TweetifySummaries:
         Args:
             signals_input: Either a file path (str) or a list of signal dictionaries
         """
-        print("\n📝 Generating tweets from signals")
+        print("\nGenerating tweets from signals")
         
         # Handle both file path and list inputs
         if isinstance(signals_input, str):
@@ -44,19 +44,19 @@ class TweetifySummaries:
                 with open(signals_input, 'r', encoding='utf-8') as f:
                     signals = json.load(f)
             except (FileNotFoundError, json.JSONDecodeError) as e:
-                print(f"❌ Error reading signals file: {e}")
+                print(f"Error reading signals file: {e}")
                 return []
         elif isinstance(signals_input, list):
             signals = signals_input
         else:
-            print(f"❌ Invalid signals input type: {type(signals_input)}")
+            print(f"Invalid signals input type: {type(signals_input)}")
             return []
         
-        print(f"📊 Total signals loaded: {len(signals)}")
+        print(f"Total signals loaded: {len(signals)}")
         
         tweets = []
         for i, signal in enumerate(signals, 1):
-            print(f"\n🔄 Processing signal {i}/{len(signals)}")
+            print(f"\nProcessing signal {i}/{len(signals)}")
             
             # Extract match details
             home_team = signal.get('odds', {}).get('home_team', '')
@@ -64,14 +64,14 @@ class TweetifySummaries:
             match_time = signal.get('odds', {}).get('commence_time', '')
             
             if not all([home_team, away_team, match_time]):
-                print("❌ Missing match details, skipping")
+                print("Missing match details, skipping")
                 continue
             
             if not self.is_match_active(match_time):
-                print(f"⏰ Skipping expired match: {home_team} vs {away_team}")
+                print(f"Skipping expired match: {home_team} vs {away_team}")
                 continue
             
-            print(f"📊 Processing match: {home_team} vs {away_team}")
+            print(f"Processing match: {home_team} vs {away_team}")
             
             # Construct prompt for GPT
             prompt = f"""
@@ -101,7 +101,7 @@ class TweetifySummaries:
             """
             
             try:
-                print("🤖 Generating tweet with GPT...")
+                print("Generating tweet with GPT...")
                 response = self.client.chat.completions.create(
                     model="gpt-4-turbo-preview",
                     messages=[{"role": "system", "content": "You are a sports betting analyst."},
@@ -111,15 +111,15 @@ class TweetifySummaries:
                 )
                 
                 tweet = response.choices[0].message.content.strip()
-                print(f"📝 Generated tweet: {tweet}")
+                print(f"Generated tweet: {tweet}")
                 
                 # Validate tweet
                 if len(tweet) > 280:
-                    print(f"❌ Tweet too long ({len(tweet)} chars), skipping")
+                    print(f"Tweet too long ({len(tweet)} chars), skipping")
                     continue
                 
                 if not all(team.lower() in tweet.lower() for team in [home_team, away_team]):
-                    print("❌ Tweet missing team names, skipping")
+                    print("Tweet missing team names, skipping")
                     continue
                 
                 tweets.append({
@@ -129,13 +129,13 @@ class TweetifySummaries:
                     'match_time': match_time,
                     'generated_at': datetime.now().isoformat()
                 })
-                print("✅ Tweet validated and added")
+                print("Tweet validated and added")
                 
                 # Add delay to respect rate limits
                 time.sleep(1.2)
                 
             except Exception as e:
-                print(f"❌ Error generating tweet: {e}")
+                print(f"Error generating tweet: {e}")
                 continue
         
         # Save tweets
@@ -153,11 +153,11 @@ class TweetifySummaries:
                 for tweet_data in tweets:
                     f.write(tweet_data['tweet'] + '\n\n')
             
-            print(f"\n✅ Saved {len(tweets)} tweets to:")
-            print(f"📄 JSON: {tweets_file}")
-            print(f"📄 Text: {tweets_text_file}")
+            print(f"\nSaved {len(tweets)} tweets to:")
+            print(f"JSON: {tweets_file}")
+            print(f"Text: {tweets_text_file}")
         else:
-            print("\n❌ No valid tweets were generated")
+            print("\nNo valid tweets were generated")
         
         return tweets
 
@@ -168,11 +168,11 @@ if __name__ == "__main__":
     gpt_files = sorted(data_dir.glob("gpt_insights_*.json"))
     
     if not gpt_files:
-        print("❌ No GPT insights files found in data directory")
+        print("No GPT insights files found in data directory")
         exit(1)
         
     latest_file = gpt_files[-1]
-    print(f"📂 Using latest insights file: {latest_file}")
+    print(f"Using latest insights file: {latest_file}")
     
     tweetify = TweetifySummaries()
     tweetify.generate_tweets(latest_file)

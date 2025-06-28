@@ -20,7 +20,7 @@ class GPTSignalMatcher:
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
-        print("✅ OpenAI API key loaded successfully")
+        print("OpenAI API key loaded successfully")
         
         # Set the API key for the older version of the package
         openai.api_key = api_key
@@ -141,7 +141,7 @@ IMPORTANT:
 Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups, or morale issues not priced into the market.
 """
 
-        print(f"\n⏳ Asking GPT for: {post.get('title', '')[:60]}...")
+        print(f"\nAsking GPT for: {post.get('title', '')[:60]}...")
 
         try:
             response = openai.ChatCompletion.create(
@@ -167,14 +167,14 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
                 if all(key in result for key in required_keys):
                     return result
                 else:
-                    print(f"❌ Missing required keys in GPT response")
+                    print(f"Missing required keys in GPT response")
                     return self._create_default_response()
             except json.JSONDecodeError as e:
-                print(f"❌ JSON decode error: {str(e)}")
+                print(f"JSON decode error: {str(e)}")
                 return self._create_default_response()
                 
         except Exception as e:
-            print(f"❌ Error in GPT API call: {str(e)}")
+            print(f"Error in GPT API call: {str(e)}")
             return self._create_default_response()
     
     def _create_default_response(self):
@@ -207,10 +207,10 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
             
             team = self.infer_team_from_text(full_text)
             if not team:
-                print(f"⛔ No team found in: {post.get('parent_title', post.get('title', ''))[:60]}")
+                print(f"No team found in: {post.get('parent_title', post.get('title', ''))[:60]}")
                 return None
 
-        print(f"🔍 Looking for matches for team: {team}")
+        print(f"Looking for matches for team: {team}")
         for match in odds_data:
             home = match['home_team'].lower()
             away = match['away_team'].lower()
@@ -218,7 +218,7 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
             
             # Check for exact match first
             if team_lower in [home, away]:
-                print(f"✅ Exact match found: {team} in {home} vs {away}")
+                print(f"Exact match found: {team} in {home} vs {away}")
                 return self._create_simplified_match(match)
             
             # Then check for strict partial matches
@@ -226,10 +226,10 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
             if len(team_parts) > 1:  # Only do partial matches for multi-word teams
                 if (all(part in home for part in team_parts) or 
                     all(part in away for part in team_parts)):
-                    print(f"✅ Partial match found: {team} in {home} vs {away}")
+                    print(f"Partial match found: {team} in {home} vs {away}")
                     return self._create_simplified_match(match)
 
-        print(f"❌ No match for post with team '{team}'")
+        print(f"No match for post with team '{team}'")
         return None
         
     def _create_simplified_match(self, match):
@@ -255,7 +255,7 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
         }
     
     def process_matches(self, matches):
-        print(f"\n📊 Total matches to process: {len(matches)}")
+        print(f"\nTotal matches to process: {len(matches)}")
         
         # Load latest Odds file
         odds_dir = Path("data")
@@ -265,20 +265,20 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
         
         # Get the most recent odds file
         latest_odds_file = odds_files[-1]
-        print(f"📊 Loading odds from: {latest_odds_file}")
+        print(f"Loading odds from: {latest_odds_file}")
         
         with open(latest_odds_file, 'r', encoding='utf-8') as f:
             odds_data = json.load(f)
-        print(f"📊 Total odds data loaded: {len(odds_data)} matches")
+        print(f"Total odds data loaded: {len(odds_data)} matches")
         
-        print(f"\n🔍 Processing {len(matches)} matches...")
+        print(f"\nProcessing {len(matches)} matches...")
         
         # Tag posts with inferred team
         for post in matches:
             full_text = (post.get("title", "") + " " + post.get("text", ""))
             post["inferred_team"] = self.infer_team_from_text(full_text)
             if post["inferred_team"]:
-                print(f"✅ Found team '{post['inferred_team']}' in: {post.get('title', '')[:60]}")
+                print(f"Found team '{post['inferred_team']}' in: {post.get('title', '')[:60]}")
         
         # Run GPT analysis
         results = []
@@ -288,7 +288,7 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
                 
             odds = self.match_team_to_post(post, odds_data)
             if odds:
-                print(f"📊 Processing match: {odds['home_team']} vs {odds['away_team']}")
+                print(f"Processing match: {odds['home_team']} vs {odds['away_team']}")
                 
                 # Validate signal
                 signal_validation = self.betting_analyzer.validate_signal({
@@ -305,9 +305,9 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
                         "gpt_analysis": analysis,
                         "signal_validation": signal_validation
                     })
-                    print(f"✅ Added analysis for: {odds['home_team']} vs {odds['away_team']}")
+                    print(f"Added analysis for: {odds['home_team']} vs {odds['away_team']}")
         
-        print(f"\n✅ GPT analysis complete. Processed {len(results)} matches")
+        print(f"\nGPT analysis complete. Processed {len(results)} matches")
         return results
     
     def _extract_categories(self, post):
@@ -340,13 +340,13 @@ if __name__ == "__main__":
     
     # Get the most recent matches file
     latest_matches_file = matches_files[-1]
-    print(f"📊 Loading matches from: {latest_matches_file}")
+    print(f"Loading matches from: {latest_matches_file}")
     
     with open(latest_matches_file, 'r', encoding='utf-8') as f:
         matches = json.load(f)
     
     results = matcher.process_matches(matches)
-    print(f"\n✅ GPT analysis complete. Processed {len(results)} matches")
+    print(f"\nGPT analysis complete. Processed {len(results)} matches")
 
 
 
