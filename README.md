@@ -7,7 +7,7 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
 
 ### 1. Real-time Betting Insights Dashboard
 - **Overview Metrics**: Total signals, active matches, and confidence scores
-- **Sentiment Distribution**: Visual breakdown of soccer realted sentiments on subreddits (strongly positive to strongly negative)
+- **Sentiment Distribution**: Visual breakdown of soccer related sentiments on subreddits (strongly positive to strongly negative)
 - **Team Analysis**: Track trending teams and market sentiment
 - **Latest Tips**: Real-time betting recommendations with match details
 
@@ -53,8 +53,8 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/whisperbet.git
-   cd whisperbet
+   git clone https://github.com/asadadnan11/atheneo.git
+   cd atheneo
    ```
 
 2. Install dependencies:
