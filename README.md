@@ -7,7 +7,7 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
 - **Data Processing**: Handles 500+ Reddit posts daily across 9 European football leagues
 - **Team Recognition**: Achieves >90% accuracy in identifying team mentions (validated on 1000+ test posts)
 - **Analysis Speed**: Reduces manual signal analysis from hours to minutes through automation
-- **Visualization**: Features 12+ interactive charts tracking 50+ teams simultaneously
+- **Visualization**: Features 6+ interactive visualizations tracking 20+ teams simultaneously
 
 ## Features
 
@@ -44,6 +44,7 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
   - Odds matching with current markets
   - Signal validation and reliability scoring
 - **Betting Analysis**:
+  - Real-time odds aggregation via API
   - Implied probability calculations
   - Expected value analysis
   - Kelly Criterion for optimal staking
