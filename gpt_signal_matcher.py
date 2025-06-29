@@ -10,35 +10,33 @@ from betting_analyzer import BettingAnalyzer
 
 class GPTSignalMatcher:
     def __init__(self):
-        # Force creation of data directory if it doesn't exist
+        # make sure data dir exists
         Path("data").mkdir(parents=True, exist_ok=True)
         
-        # Load environment variables
         load_dotenv()
         
-        # Verify API key is loaded
+        # check if we have api key
         api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
         print("OpenAI API key loaded successfully")
         
-        # Set the API key for the older version of the package
+        # older openai package setup
         openai.api_key = api_key
         
-        # Initialize betting analyzer
         self.betting_analyzer = BettingAnalyzer()
     
     def infer_team_from_text(self, text):
-        """Infer team from text, checking both title and comment text"""
+        # try to figure out which team from the text
         if not text:
             return None
             
         text = text.lower()
         
-        # First check subreddit name if available
+        # check subreddit name first - some have obvious team mappings
         subreddit = text.split('subreddit": "')[-1].split('"')[0] if 'subreddit": "' in text else ""
         if subreddit:
-            # Map common subreddit names to teams
+            # common subreddit to team mappings
             subreddit_map = {
                 'reddevils': 'manchester united',
                 'gunners': 'arsenal',
@@ -50,43 +48,42 @@ class GPTSignalMatcher:
             if subreddit.lower() in subreddit_map:
                 return subreddit_map[subreddit.lower()]
         
-        # Try exact matches
+        # try exact team name matches first
         for team, aliases in TEAM_ALIASES.items():
-            # Check team name itself
             if team.lower() in text:
                 return team
                 
-            # Check aliases (exact matches)
+            # check aliases too
             for alias in aliases:
                 if alias.lower() in text:
                     return team
         
-        # If no exact matches, try partial matches but be more strict
+        # if no exact matches, try partial but be careful
         for team, aliases in TEAM_ALIASES.items():
             team_parts = team.lower().split()
-            # Only match if all parts of the team name are present
+            # need all parts of team name present
             if all(part in text for part in team_parts):
                 return team
                 
-            # Check aliases but require longer matches
+            # check longer aliases
             for alias in aliases:
                 alias_parts = alias.lower().split()
-                # Only match if the alias is at least 5 chars and all parts are present
+                # only match if alias is decent length and all parts present
                 if len(alias) >= 5 and all(part in text for part in alias_parts):
                     return team
         
         return None
     
     def ask_gpt(self, post, odds):
-        # Get the odds values
+        # get odds info
         market = odds['bookmakers'][0]['markets'][0]
         home_odds = next(o['price'] for o in market['outcomes'] if o['name'] == odds['home_team'])
         away_odds = next(o['price'] for o in market['outcomes'] if o['name'] == odds['away_team'])
         
-        # Calculate betting metrics
+        # calculate some betting stats
         home_prob = self.betting_analyzer.calculate_implied_probability(home_odds)
         away_prob = self.betting_analyzer.calculate_implied_probability(away_odds)
-        market_efficiency = self.betting_analyzer.calculate_market_efficiency({
+        market_eff = self.betting_analyzer.calculate_market_efficiency({
             odds['home_team']: home_odds,
             odds['away_team']: away_odds
         })
@@ -107,7 +104,7 @@ Given the Reddit post and betting odds below, analyze and return a JSON object w
       "home": {home_prob:.3f},
       "away": {away_prob:.3f}
     }},
-    "market_efficiency": {market_efficiency:.3f},
+    "market_efficiency": {market_eff:.3f},
     "expected_value": {{
       "home": {self.betting_analyzer.calculate_expected_value(home_prob, home_odds):.3f},
       "away": {self.betting_analyzer.calculate_expected_value(away_prob, away_odds):.3f}
@@ -150,19 +147,19 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
                     {"role": "system", "content": "You are a sharp sports betting analyst. Return only valid JSON with no additional text."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3  # Lower temperature for more consistent JSON
+                temperature=0.3  # lower temp for more consistent JSON
             )
 
             raw_reply = response.choices[0].message.content.strip()
             
-            # Clean up the response
+            # clean up response
             raw_reply = re.sub(r"```(?:json)?", "", raw_reply)
             raw_reply = raw_reply.replace("```", "").strip()
             
-            # Try to parse the JSON
+            # parse json
             try:
                 result = json.loads(raw_reply)
-                # Validate required keys
+                # check required keys
                 required_keys = ["analysis", "confidence", "action", "rationale", "risk", "betting_metrics"]
                 if all(key in result for key in required_keys):
                     return result
@@ -178,7 +175,7 @@ Be aggressive. Look for injuries, fatigue, revenge narratives, surprise lineups,
             return self._create_default_response()
     
     def _create_default_response(self):
-        """Create a default response when GPT fails"""
+        # fallback response when gpt fails
         return {
             "analysis": "Failed to analyze post",
             "confidence": "LOW",

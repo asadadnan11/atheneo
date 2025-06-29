@@ -24,7 +24,7 @@ class TweetifySummaries:
         try:
             match_time = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
             current_time = datetime.now(timezone.utc)
-            # Allow matches up to 7 days in the future
+            # only want matches in next 7 days
             return match_time > current_time and (match_time - current_time).days <= 7
         except Exception as e:
             print(f"Error checking match time: {e}")
@@ -38,7 +38,7 @@ class TweetifySummaries:
         """
         print("\nGenerating tweets from signals")
         
-        # Handle both file path and list inputs
+        # Handle different input types
         if isinstance(signals_input, str):
             try:
                 with open(signals_input, 'r', encoding='utf-8') as f:
@@ -58,7 +58,7 @@ class TweetifySummaries:
         for i, signal in enumerate(signals, 1):
             print(f"\nProcessing signal {i}/{len(signals)}")
             
-            # Extract match details
+            # Get match info
             home_team = signal.get('odds', {}).get('home_team', '')
             away_team = signal.get('odds', {}).get('away_team', '')
             match_time = signal.get('odds', {}).get('commence_time', '')
@@ -73,7 +73,7 @@ class TweetifySummaries:
             
             print(f"Processing match: {home_team} vs {away_team}")
             
-            # Construct prompt for GPT
+            # Build prompt for GPT
             prompt = f"""
             Generate a concise betting tip tweet for this specific match:
             
@@ -102,7 +102,7 @@ class TweetifySummaries:
             
             try:
                 print("Generating tweet with GPT...")
-                response = self.client.chat.completions.create(
+                resp = self.client.chat.completions.create(
                     model="gpt-4-turbo-preview",
                     messages=[{"role": "system", "content": "You are a sports betting analyst."},
                             {"role": "user", "content": prompt}],
@@ -110,10 +110,10 @@ class TweetifySummaries:
                     max_tokens=150
                 )
                 
-                tweet = response.choices[0].message.content.strip()
+                tweet = resp.choices[0].message.content.strip()
                 print(f"Generated tweet: {tweet}")
                 
-                # Validate tweet
+                # Basic validation
                 if len(tweet) > 280:
                     print(f"Tweet too long ({len(tweet)} chars), skipping")
                     continue
@@ -131,14 +131,14 @@ class TweetifySummaries:
                 })
                 print("Tweet validated and added")
                 
-                # Add delay to respect rate limits
+                # Rate limit protection
                 time.sleep(1.2)
                 
             except Exception as e:
                 print(f"Error generating tweet: {e}")
                 continue
         
-        # Save tweets
+        # Save results
         if tweets:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             tweets_file = f'data/alpha_bets_tweets_{timestamp}.json'
@@ -161,7 +161,7 @@ class TweetifySummaries:
         
         return tweets
 
-# For backward compatibility
+# Run this if called directly
 if __name__ == "__main__":
     # Find the most recent GPT insights file
     data_dir = Path("data")

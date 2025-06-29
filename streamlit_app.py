@@ -11,15 +11,14 @@ import functools
 import re
 import numpy as np
 
-# Page config
+# page setup stuff
 st.set_page_config(
     page_title="WhisperBet Insights",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="expanded"
-)
+    initial_sidebar_state="expanded")
 
-# Custom CSS - optimized
+# css styling - took forever to get right
 st.markdown("""
     <style>
     .main {
@@ -46,17 +45,17 @@ class DataLoader:
     def __init__(self):
         self.data_dir = Path("data")
         self.cache = {}
-        self.cache_timeout = 300  # 5 minutes cache timeout
+        self.cache_timeout = 300  # 5 min cache - might need to adjust
         
     @functools.lru_cache(maxsize=32)
     def get_latest_file(self, pattern: str) -> Path:
-        """Get the most recent file matching the pattern with caching."""
+        # get most recent file matching pattern
         files = sorted(self.data_dir.glob(pattern))
         return files[-1] if files else None
     
-    @functools.lru_cache(maxsize=32)
+    @functools.lru_cache(maxsize=32) 
     def load_json(self, file_path: Path) -> List[Dict]:
-        """Load JSON data from file with caching."""
+        # load json with some basic error handling
         if not file_path or not file_path.exists():
             return []
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -64,39 +63,34 @@ class DataLoader:
     
     @functools.lru_cache(maxsize=32)
     def get_matches(self) -> List[Dict]:
-        """Get latest matches data with caching."""
         file_path = self.get_latest_file("matches_*.json")
         return self.load_json(file_path)
     
     @functools.lru_cache(maxsize=32)
     def get_signals(self) -> List[Dict]:
-        """Get latest signals data with caching."""
         file_path = self.get_latest_file("gpt_insights_*.json")
         return self.load_json(file_path)
     
     @functools.lru_cache(maxsize=32)
     def get_tweets(self) -> List[Dict]:
-        """Get latest tweets data with caching."""
         file_path = self.get_latest_file("alpha_bets_tweets_*.json")
         if not file_path:
             return []
         try:
-            tweets = self.load_json(file_path)
-            # Convert list to dict if needed
-            if isinstance(tweets, list):
-                return tweets
-            # If it's a dict with a 'tweets' key, return that
-            if isinstance(tweets, dict) and 'tweets' in tweets:
-                return tweets['tweets']
+            tweets_data = self.load_json(file_path)
+            # handle different data structures - this was annoying to debug
+            if isinstance(tweets_data, list):
+                return tweets_data
+            if isinstance(tweets_data, dict) and 'tweets' in tweets_data:
+                return tweets_data['tweets']
             return []
         except Exception as e:
-            print(f"Error loading tweets: {e}")
+            print(f"Error loading tweets: {e}")  # TODO: better error handling
             return []
 
-# Cache expensive computations
+# cache this since it's expensive
 @st.cache_data(ttl=300)
 def format_match_data(matches: List[Dict]) -> pd.DataFrame:
-    """Format match data with caching"""
     if not matches:
         return pd.DataFrame()
         
@@ -115,23 +109,23 @@ def format_match_data(matches: List[Dict]) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 def analyze_betting_sentiment(tweet_text: str) -> tuple:
-    """Analyze betting sentiment from tweet text with betting-specific language patterns."""
+    # analyze sentiment from betting tweets - this got pretty complex
     if not tweet_text:
         return 'neutral', 0.0
         
-    tweet_text = tweet_text.lower()
+    text = tweet_text.lower()
     
-    # Base confidence from explicit statements
-    confidence_score = 0.4  # Default moderate confidence
-    if 'confidence: high' in tweet_text:
-        confidence_score = 0.7
-    elif 'confidence: medium' in tweet_text:
-        confidence_score = 0.5
-    elif 'confidence: low' in tweet_text:
-        confidence_score = 0.3
+    # base confidence score
+    conf_score = 0.4  
+    if 'confidence: high' in text:
+        conf_score = 0.7
+    elif 'confidence: medium' in text:
+        conf_score = 0.5
+    elif 'confidence: low' in text:
+        conf_score = 0.3
 
-    # Strong positive signals (clear value + confidence)
-    strong_value_patterns = [
+    # strong positive betting signals
+    strong_patterns = [
         r'max (?:bet|play|unit)',
         r'(?:top|best) (?:bet|play)',
         r'strong value',
@@ -142,8 +136,8 @@ def analyze_betting_sentiment(tweet_text: str) -> tuple:
         r'lock'
     ]
     
-    # Positive signals (value or edge identified)
-    value_patterns = [
+    # regular positive signals
+    good_patterns = [
         r'value (?:bet|play|pick)',
         r'good (?:odds|price)',
         r'worth (?:a|the) (?:look|play)',
@@ -153,7 +147,7 @@ def analyze_betting_sentiment(tweet_text: str) -> tuple:
         r'lean(?:ing)? \w+'
     ]
     
-    # Neutral/cautious signals (uncertainty or small stakes)
+    # neutral/unsure signals
     neutral_patterns = [
         r'consider',
         r'could go either way',
@@ -169,8 +163,8 @@ def analyze_betting_sentiment(tweet_text: str) -> tuple:
         r'dont sleep on'
     ]
     
-    # Negative signals (warnings or poor value)
-    negative_patterns = [
+    # negative/avoid signals
+    bad_patterns = [
         r'avoid',
         r'stay away',
         r'skip',
@@ -185,45 +179,45 @@ def analyze_betting_sentiment(tweet_text: str) -> tuple:
         r'sharp action against'
     ]
 
-    # Count matches
-    strong_value_count = sum(1 for p in strong_value_patterns if re.search(p, tweet_text))
-    value_count = sum(1 for p in value_patterns if re.search(p, tweet_text))
-    neutral_count = sum(1 for p in neutral_patterns if re.search(p, tweet_text))
-    negative_count = sum(1 for p in negative_patterns if re.search(p, tweet_text))
+    # count pattern matches
+    strong_count = sum(1 for p in strong_patterns if re.search(p, text))
+    good_count = sum(1 for p in good_patterns if re.search(p, text))
+    neutral_count = sum(1 for p in neutral_patterns if re.search(p, text))
+    bad_count = sum(1 for p in bad_patterns if re.search(p, text))
     
-    # Extract and analyze odds
-    odds_pattern = r'(?:odds?[:)]?\s*(?:at|of)?\s*)?(\d+(?:\.\d+)?)'
-    odds_matches = re.findall(odds_pattern, tweet_text)
-    odds_values = [float(o) for o in odds_matches if float(o) > 1.0]
+    # try to extract odds values
+    odds_regex = r'(?:odds?[:)]?\s*(?:at|of)?\s*)?(\d+(?:\.\d+)?)'
+    odds_found = re.findall(odds_regex, text)
+    odds_vals = [float(o) for o in odds_found if float(o) > 1.0]
     
-    # Odds-based sentiment
+    # odds sentiment calculation
     odds_sentiment = 0
-    if odds_values:
-        avg_odds = sum(odds_values) / len(odds_values)
+    if odds_vals:
+        avg_odds = sum(odds_vals) / len(odds_vals)
         if avg_odds > 3.0:  # High odds
-            if any(p in tweet_text for p in ['value', 'worth', 'good']):
+            if any(p in text for p in ['value', 'worth', 'good']):
                 odds_sentiment = 0.2  # Slight positive for value on underdog
             else:
                 odds_sentiment = -0.1  # Slight negative for high risk
         elif avg_odds < 1.5:  # Low odds
-            if any(p in tweet_text for p in ['trap', 'risky', 'juice']):
+            if any(p in text for p in ['trap', 'risky', 'juice']):
                 odds_sentiment = -0.2  # Negative for potential traps
             else:
                 odds_sentiment = 0.1  # Slight positive for favorites
 
-    # Calculate base score with betting-specific weights
+    # calculate base score with betting-specific weights
     base_score = (
-        strong_value_count * 0.6 +     # Strong conviction but reduced impact
-        value_count * 0.3 +            # Moderate positive for value found
+        strong_count * 0.6 +     # Strong conviction but reduced impact
+        good_count * 0.3 +            # Moderate positive for value found
         neutral_count * -0.15 +        # Slight negative for uncertainty
-        negative_count * -0.5 +        # Strong negative but not overwhelming
+        bad_count * -0.5 +        # Strong negative but not overwhelming
         odds_sentiment                 # Slight odds adjustment
     )
     
-    # Apply confidence multiplier
-    sentiment_score = base_score * confidence_score
+    # apply confidence multiplier
+    sentiment_score = base_score * conf_score
     
-    # Thresholds calibrated to betting language
+    # thresholds calibrated to betting language
     if sentiment_score > 0.5:  # Very high conviction needed
         return 'strongly positive', sentiment_score
     elif sentiment_score > 0.15:  # Lower threshold for positive
