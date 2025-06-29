@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
+# debugging - check if env vars are loaded properly
 print("ENV loaded:")
 print("CLIENT_ID =", os.getenv("REDDIT_CLIENT_ID"))
 print("CLIENT_SECRET =", os.getenv("REDDIT_CLIENT_SECRET"))
@@ -16,25 +17,24 @@ import time
 import logging
 import argparse
 
-
-# Set up logging
+# basic logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-# Reddit API credentials
+# reddit api creds from env
 CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 USER_AGENT = os.getenv("REDDIT_USER_AGENT")
 
-# Ensure data directories exist
+# make sure dirs exist
 os.makedirs('data', exist_ok=True)
 os.makedirs('data/test_pipeline', exist_ok=True)
-os.makedirs('data/history', exist_ok=True)  # New directory for historical files
+os.makedirs('data/history', exist_ok=True)
 
-# Subreddits to monitor - reduced to essential ones
+# subreddits we're monitoring - focused on the important ones
 SUBREDDITS = [
     # Premier League
     'PremierLeague', 'Gunners', 'MCFC', 'LiverpoolFC', 'chelseafc',
@@ -43,46 +43,46 @@ SUBREDDITS = [
     # Other Leagues
     'soccer', 'LaLiga', 'Barca', 'realmadrid',
     
-    # Betting & Analysis
+    # Betting stuff
     'soccerbetting', 'soccernerd'
 ]
 
-# Keywords to track
+# keywords to track - lot of manual work here
 KEYWORDS = [
-    # Injury & Fitness
+    # injury stuff
     'injury', 'injured', 'fitness', 'recovery', 'knock', 'strain', 'hamstring',
     'muscle', 'concussion', 'medical', 'scan', 'rehab', 'physio', 'treatment',
     
-    # Team News
+    # team news - most important for betting
     'lineup', 'starting xi', 'team news', 'squad', 'selection', 'rotation',
     'rested', 'dropped', 'bench', 'substitute', 'reserve', 'suspended',
     'ban', 'red card', 'yellow card', 'accumulated',
     
-    # Form & Performance
+    # form indicators
     'form', 'momentum', 'confidence', 'morale', 'atmosphere', 'pressure',
     'struggling', 'firing', 'peaking', 'slump', 'crisis', 'rebound',
     
-    # Tactical
+    # tactical stuff
     'tactics', 'formation', 'system', 'style', 'approach', 'gameplan',
     'strategy', 'setup', 'shape', 'press', 'counter', 'possession',
     
-    # Manager & Staff
+    # manager related
     'coach', 'manager', 'head coach', 'boss', 'tactician', 'staff',
     'training', 'preparation', 'analysis', 'scout', 'scouting',
     
-    # Transfer & Squad
+    # transfers
     'transfer', 'signing', 'deal', 'contract', 'negotiation', 'agreement',
     'squad', 'roster', 'depth', 'cover', 'option', 'alternative',
     
-    # Weather & Conditions
+    # weather & conditions - surprisingly important
     'weather', 'pitch', 'condition', 'surface', 'grass', 'wet', 'dry',
     'wind', 'rain', 'snow', 'temperature', 'climate', 'stadium',
     
-    # Schedule & Fixtures
+    # schedule
     'schedule', 'fixture', 'congestion', 'rotation', 'rest', 'recovery',
     'travel', 'away', 'home', 'stadium', 'venue', 'location',
     
-    # Betting Specific
+    # betting keywords - the money makers
     'odds', 'value', 'edge', 'bet', 'wager', 'stake', 'bankroll',
     'handicap', 'spread', 'over/under', 'total', 'moneyline',
     'accumulator', 'parlay', 'treble', 'double', 'single',
@@ -91,7 +91,7 @@ KEYWORDS = [
     'favorite', 'underdog', 'pick', 'tip', 'prediction'
 ]
 
-# Sentiment Keywords - optimized for performance
+# sentiment analysis - pretty basic but works
 SENTIMENT_KEYWORDS = {
     'positive': [
         'boost', 'return', 'available', 'fit', 'ready', 'sharp',
@@ -107,10 +107,9 @@ SENTIMENT_KEYWORDS = {
     ]
 }
 
-# Output file path
 OUTPUT_FILE = 'data/reddit_stream.json'
 
-# Global storage for matches
+# match storage class - handles data persistence
 class MatchStorage:
     def __init__(self):
         self.matches = []
@@ -118,22 +117,21 @@ class MatchStorage:
         self.history_dir = 'data/history'
     
     def clear(self):
-        """Clear the current matches list"""
+        # clear current matches
         self.matches = []
     
     def add_matches(self, new_matches):
-        """Add new matches to the list"""
+        # add new matches to list
         if isinstance(new_matches, list):
             self.matches.extend(new_matches)
         else:
             self.matches.append(new_matches)
     
     def get_matches(self):
-        """Get the current matches list"""
         return self.matches
     
     def cleanup_old_files(self):
-        """Clean up old history files, keeping only the last 7 days"""
+        # clean up old history files - keep only last 7 days
         try:
             for file in os.listdir(self.history_dir):
                 if file.startswith('matches_'):
@@ -146,11 +144,11 @@ class MatchStorage:
     
     def save_matches(self):
         try:
-            # Ensure matches is a list
+            # ensure matches is a list
             if not isinstance(self.matches, list):
                 self.matches = list(self.matches)
             
-            # Validate each match
+            # validate each match - had encoding issues before
             validated_matches = []
             for match in self.matches:
                 if isinstance(match, dict):
@@ -162,32 +160,32 @@ class MatchStorage:
                             validated_match[key] = value
                     validated_matches.append(validated_match)
             
-            # Save current matches
+            # save current matches
             with open(self.matches_file, 'w', encoding='utf-8') as f:
                 json.dump(validated_matches, f, indent=2, ensure_ascii=False)
             logging.info(f"Saved {len(validated_matches)} matches to {self.matches_file}")
             
-            # Save historical copy
+            # save historical copy too
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             history_file = os.path.join(self.history_dir, f"matches_{timestamp}.json")
             with open(history_file, 'w', encoding='utf-8') as f:
                 json.dump(validated_matches, f, indent=2, ensure_ascii=False)
             logging.info(f"Saved historical copy to {history_file}")
             
-            # Cleanup old files
+            # cleanup old files
             self.cleanup_old_files()
             
         except Exception as e:
             logging.error(f"Error saving matches: {str(e)}")
-            # Create an empty matches file if saving fails
+            # create empty file if saving fails
             with open(self.matches_file, 'w', encoding='utf-8') as f:
                 json.dump([], f)
 
-# Create global storage instance
+# global storage instance
 match_storage = MatchStorage()
 
 def init_reddit():
-    """Initialize Reddit API client"""
+    # initialize reddit api client
     return praw.Reddit(
         client_id=CLIENT_ID,
         client_secret=CLIENT_SECRET,
@@ -195,87 +193,95 @@ def init_reddit():
     )
 
 def analyze_sentiment(text):
-    """Analyze sentiment of text based on keywords"""
+    # basic sentiment analysis using keyword matching
     text_lower = text.lower()
-    positive_count = sum(1 for word in SENTIMENT_KEYWORDS['positive'] if word in text_lower)
-    negative_count = sum(1 for word in SENTIMENT_KEYWORDS['negative'] if word in text_lower)
+    pos_count = sum(1 for word in SENTIMENT_KEYWORDS['positive'] if word in text_lower)
+    neg_count = sum(1 for word in SENTIMENT_KEYWORDS['negative'] if word in text_lower)
     
-    if positive_count > negative_count:
+    if pos_count > neg_count:
         return 'positive'
-    elif negative_count > positive_count:
+    elif neg_count > pos_count:
         return 'negative'
-    return 'neutral'
+    else:
+        return 'neutral'
 
 def check_keywords(text):
-    """Check if any keywords appear in the text"""
-    return any(keyword.lower() in text.lower() for keyword in KEYWORDS)
+    # check if text contains any of our keywords
+    text_lower = text.lower()
+    return any(keyword in text_lower for keyword in KEYWORDS)
 
 def monitor_subreddits(single_cycle=False):
-    """Monitor subreddits for posts matching keywords"""
+    # main monitoring function - this does the heavy lifting
     reddit = init_reddit()
-    start_time = time.time()
-    max_duration = 60  # Reduced from 120 to 60 seconds
+    
+    logging.info("Starting Reddit monitoring...")
+    logging.info(f"Monitoring subreddits: {SUBREDDITS}")
     
     while True:
-        logging.info("Starting new monitoring cycle...")
-        match_storage.clear()
-        
-        for subreddit in SUBREDDITS:
-            try:
-                # Reduced limit from 5 to 3 posts per subreddit
-                for post in reddit.subreddit(subreddit).new(limit=3):
-                    if check_keywords(post.title) or check_keywords(post.selftext):
-                        sentiment = analyze_sentiment(f"{post.title} {post.selftext}")
-                        match_storage.add_matches([{
-                            'subreddit': subreddit,
-                            'title': post.title,
-                            'text': post.selftext,
-                            'url': post.url,
-                            'created_utc': post.created_utc,
-                            'timestamp': datetime.now().isoformat(),
-                            'sentiment': sentiment,
-                            'score': post.score,
-                            'num_comments': post.num_comments
-                        }])
-                        
-                    try:
-                        post.comments.replace_more(limit=0)
-                        # Only process top 5 comments instead of all
-                        for comment in post.comments.list()[:5]:
-                            if check_keywords(comment.body):
-                                sentiment = analyze_sentiment(comment.body)
-                                match_storage.add_matches([{
-                                    'subreddit': subreddit,
-                                    'parent_title': post.title,
-                                    'comment_text': comment.body,
-                                    'url': comment.permalink,
-                                    'created_utc': comment.created_utc,
-                                    'timestamp': datetime.now().isoformat(),
-                                    'sentiment': sentiment,
-                                    'score': comment.score
-                                }])
-                    except Exception as e:
-                        logging.error(f"Error processing comments for post: {str(e)}")
-                        continue
+        try:
+            current_matches = []
+            
+            for subreddit_name in SUBREDDITS:
+                try:
+                    subreddit = reddit.subreddit(subreddit_name)
                     
-            except Exception as e:
-                logging.error(f"Error monitoring r/{subreddit}: {str(e)}")
-                continue
+                    # get new posts from last 2 hours
+                    time_threshold = datetime.utcnow() - timedelta(hours=2)
+                    
+                    for post in subreddit.new(limit=50):  # check last 50 posts
+                        post_time = datetime.utcfromtimestamp(post.created_utc)
+                        
+                        if post_time < time_threshold:
+                            continue
+                        
+                        # combine title and body
+                        full_text = f"{post.title} {post.selftext}"
+                        
+                        # check if relevant
+                        if check_keywords(full_text):
+                            sentiment = analyze_sentiment(full_text)
+                            
+                            match_data = {
+                                'id': post.id,
+                                'title': post.title,
+                                'text': post.selftext,
+                                'author': str(post.author) if post.author else 'deleted',
+                                'subreddit': subreddit_name,
+                                'score': post.score,
+                                'num_comments': post.num_comments,
+                                'created_utc': post.created_utc,
+                                'timestamp': post_time.isoformat() + 'Z',
+                                'url': post.url if post.url else '',
+                                'sentiment': sentiment,
+                                'upvote_ratio': post.upvote_ratio,
+                                'permalink': f"https://reddit.com{post.permalink}"
+                            }
+                            
+                            current_matches.append(match_data)
+                            
+                except Exception as e:
+                    logging.error(f"Error processing subreddit {subreddit_name}: {str(e)}")
+                    continue
+            
+            # save matches if we found any
+            if current_matches:
+                match_storage.clear()
+                match_storage.add_matches(current_matches)
+                match_storage.save_matches()
+                logging.info(f"Found and saved {len(current_matches)} relevant posts")
+            else:
+                logging.info("No relevant posts found in this cycle")
+            
+            if single_cycle:
+                break
                 
-        if match_storage.get_matches():
-            logging.info(f"Found {len(match_storage.get_matches())} new matches")
+            # wait before next cycle - don't hammer the api
+            time.sleep(300)  # 5 minutes
             
-            # Also save to timestamped file
-            filename = f"data/matches_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(match_storage.get_matches(), f, indent=2)
-            logging.info(f"Saved matches to {filename}")
-
-        if single_cycle or (time.time() - start_time) >= max_duration:
-            logging.info("Reached maximum duration of 1 minute. Stopping harvester.")
-            break
-            
-        time.sleep(30)  # Increased from 10 to 30 seconds
+        except Exception as e:
+            logging.error(f"Error in monitoring loop: {str(e)}")
+            time.sleep(60)  # wait 1 min on error
+            continue
 
 def collect_overnight_data():
     """Collect data from the past 8 hours"""

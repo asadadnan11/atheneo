@@ -15,7 +15,7 @@ from torch.optim import AdamW
 from sklearn.preprocessing import StandardScaler
 
 class TeamDataset(Dataset):
-    def __init__(self, texts: List[str], labels: List[int], tokenizer, max_length=128):
+    def __init__(self, texts, labels, tokenizer, max_length=128):
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
@@ -50,46 +50,40 @@ class TeamIdentifier:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model.to(self.device)
         
-    def fit(self, texts: List[str], teams: List[int], epochs: int = 3, batch_size: int = 16):
-        try:
-            # Convert texts to input tensors
-            inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
-            labels = torch.tensor(teams)
-            
-            # Create DataLoader
-            dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'], labels)
-            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-            
-            # Setup optimizer
-            optimizer = AdamW(self.model.parameters(), lr=2e-5)
-            
-            # Training loop
-            self.model.train()
-            for epoch in range(epochs):
-                total_loss = 0
-                for batch in dataloader:
-                    input_ids = batch[0].to(self.device)
-                    attention_mask = batch[1].to(self.device)
-                    labels = batch[2].to(self.device)
-                    
-                    optimizer.zero_grad()
-                    outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
-                    loss = outputs.loss
-                    loss.backward()
-                    optimizer.step()
-                    
-                    total_loss += loss.item()
+    def fit(self, texts, teams, epochs=3, batch_size=16):
+        # convert to tensors for training
+        inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
+        labels = torch.tensor(teams)
+        
+        # setup data loader
+        dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'], labels)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        optimizer = AdamW(self.model.parameters(), lr=2e-5)
+        
+        # training loop - this takes a while
+        self.model.train()
+        for epoch in range(epochs):
+            total_loss = 0
+            for batch in dataloader:
+                input_ids = batch[0].to(self.device)
+                attention_mask = batch[1].to(self.device)
+                labels = batch[2].to(self.device)
                 
-                print(f'Epoch {epoch + 1}/{epochs}, Loss: {total_loss/len(dataloader):.4f}')
+                optimizer.zero_grad()
+                outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
+                loss = outputs.loss
+                loss.backward()
+                optimizer.step()
+                
+                total_loss += loss.item()
             
-            print("Training completed successfully!")
-            
-        except Exception as e:
-            print(f"Error during training: {str(e)}")
-            raise
+            print(f'Epoch {epoch + 1}/{epochs}, Loss: {total_loss/len(dataloader):.4f}')
+        
+        print("Training completed successfully!")
 
-    def prepare_training_data(self, matches_file: str):
-        """Prepare training data from matches file"""
+    def prepare_training_data(self, matches_file):
+        # load matches and extract team data
         with open(matches_file, 'r', encoding='utf-8') as f:
             matches = json.load(f)
         
@@ -97,12 +91,10 @@ class TeamIdentifier:
         labels = []
         
         for match in matches:
-            # Extract text from post
             text = f"{match.get('title', '')} {match.get('text', '')}"
             if not text.strip():
                 continue
                 
-            # Get team from the match
             team = match.get('inferred_team')
             if team and team in TEAM_ALIASES:
                 texts.append(text)
@@ -110,8 +102,8 @@ class TeamIdentifier:
         
         return texts, labels
     
-    def predict(self, text: str) -> Dict[str, float]:
-        """Predict team probabilities for given text"""
+    def predict(self, text):
+        # get predictions for text input
         self.model.eval()
         
         encoding = self.tokenizer(
@@ -132,16 +124,16 @@ class TeamIdentifier:
                 attention_mask=attention_mask
             )
         
-        probabilities = torch.softmax(outputs.logits, dim=1)
+        probs = torch.softmax(outputs.logits, dim=1)
         team_probs = {
             team: prob.item()
-            for team, prob in zip(TEAM_ALIASES.keys(), probabilities[0])
+            for team, prob in zip(TEAM_ALIASES.keys(), probs[0])
         }
         
         return team_probs
     
-    def save_model(self, path: str):
-        """Save the model and tokenizer"""
+    def save_model(self, path):
+        # save trained model
         self.model.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
 
@@ -154,129 +146,128 @@ class SignalReliability(nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.to(self.device)
         
-    def fit(self, features: List[Dict], labels: List[float], epochs: int = 3, batch_size: int = 16):
-        try:
-            # Process text content
-            texts = [f['content'] for f in features]
-            inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
-            
-            # Process numerical features
-            numerical = torch.tensor([[
-                f['score'],
-                f['num_comments']
-            ] for f in features], dtype=torch.float32)
-            
-            # Scale numerical features
-            numerical = torch.tensor(self.scaler.fit_transform(numerical), dtype=torch.float32)
-            
-            # Convert labels
-            labels = torch.tensor(labels, dtype=torch.float32).reshape(-1, 1)
-            
-            # Create dataset
-            dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'], numerical, labels)
-            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-            
-            # Setup optimizer
-            optimizer = AdamW(self.parameters(), lr=2e-5)
-            criterion = nn.MSELoss()
-            
-            # Training loop
-            self.train()
-            for epoch in range(epochs):
-                total_loss = 0
-                for batch in dataloader:
-                    input_ids = batch[0].to(self.device)
-                    attention_mask = batch[1].to(self.device)
-                    numerical = batch[2].to(self.device)
-                    labels = batch[3].to(self.device)
-                    
-                    optimizer.zero_grad()
-                    outputs = self.model(input_ids, attention_mask=attention_mask).logits
-                    outputs = torch.cat([outputs, numerical], dim=1)
-                    loss = criterion(outputs, labels)
-                    loss.backward()
-                    optimizer.step()
-                    
-                    total_loss += loss.item()
+    def fit(self, features, labels, epochs=3, batch_size=16):
+        # process text content
+        texts = [f['content'] for f in features]
+        inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors='pt')
+        
+        # handle numerical features
+        numerical = torch.tensor([[
+            f['score'],
+            f['num_comments']
+        ] for f in features], dtype=torch.float32)
+        
+        # scale the numerical stuff
+        numerical = torch.tensor(self.scaler.fit_transform(numerical), dtype=torch.float32)
+        
+        labels = torch.tensor(labels, dtype=torch.float32).reshape(-1, 1)
+        
+        dataset = TensorDataset(inputs['input_ids'], inputs['attention_mask'], numerical, labels)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        optimizer = AdamW(self.parameters(), lr=2e-5)
+        criterion = nn.MSELoss()
+        
+        # train the model
+        self.train()
+        for epoch in range(epochs):
+            total_loss = 0
+            for batch in dataloader:
+                input_ids = batch[0].to(self.device)
+                attention_mask = batch[1].to(self.device)
+                numerical = batch[2].to(self.device)
+                labels = batch[3].to(self.device)
                 
-                print(f'Epoch {epoch + 1}/{epochs}, Loss: {total_loss/len(dataloader):.4f}')
+                optimizer.zero_grad()
+                outputs = self.model(input_ids, attention_mask=attention_mask).logits
+                outputs = torch.cat([outputs, numerical], dim=1)
+                loss = criterion(outputs, labels)
+                loss.backward()
+                optimizer.step()
+                
+                total_loss += loss.item()
             
-            print("Training completed successfully!")
-            
-        except Exception as e:
-            print(f"Error during training: {str(e)}")
-            raise
-
-    def save_pretrained(self, path: str):
-        """Save the model and tokenizer"""
+            print(f'Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}')
+    
+    def save_pretrained(self, path):
+        # save model state
+        torch.save(self.state_dict(), f"{path}/model.pt")
         self.model.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
-
-    def extract_features(self, post: Dict) -> np.ndarray:
-        """Extract features from a post for reliability prediction"""
+    
+    def extract_features(self, post):
+        # extract features from post data - lots of manual feature engineering here
         features = []
         
-        # User metrics
-        features.append(post.get('user_age_days', 0))
-        features.append(post.get('user_karma', 0))
+        # basic stats
+        features.append(post.get('score', 0))
+        features.append(post.get('num_comments', 0))
+        features.append(len(post.get('title', '')))
+        features.append(len(post.get('text', '')))
         
-        # Post metrics
-        text = f"{post.get('title', '')} {post.get('text', '')}"
-        features.append(len(text))
-        features.append(1 if post.get('url') else 0)
+        # time features
+        timestamp = post.get('timestamp')
+        if timestamp:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            features.append(dt.hour)  # hour of day
+            features.append(dt.weekday())  # day of week
+        else:
+            features.extend([0, 0])
         
-        # Historical accuracy
-        user_id = post.get('author')
-        historical_accuracy = self.historical_data.get(user_id, 0.5)
-        features.append(historical_accuracy)
+        # text features - pretty basic stuff
+        title = post.get('title', '').lower()
+        text = post.get('text', '').lower()
+        combined_text = f"{title} {text}"
         
-        # Content metrics
-        categories = self._extract_categories(post)
-        features.append(len(categories))
+        # keyword indicators
+        betting_keywords = ['bet', 'odds', 'tip', 'prediction', 'stake']
+        features.append(sum(1 for word in betting_keywords if word in combined_text))
         
-        # Keyword density
-        keywords = ['injury', 'lineup', 'form', 'weather', 'bet']
-        keyword_count = sum(1 for kw in keywords if kw in text.lower())
-        features.append(keyword_count / len(text.split()) if text else 0)
+        # sentiment indicators - rough approximation
+        positive_words = ['good', 'great', 'excellent', 'strong', 'confident']
+        negative_words = ['bad', 'terrible', 'avoid', 'risky', 'dangerous']
+        features.append(sum(1 for word in positive_words if word in combined_text))
+        features.append(sum(1 for word in negative_words if word in combined_text))
         
-        return np.array(features).reshape(1, -1)
+        return np.array(features)
     
-    def _extract_categories(self, post: Dict) -> List[str]:
-        """Extract content categories from post"""
+    def _extract_categories(self, post):
+        # categorize post content - could be smarter but this works
         categories = []
         text = f"{post.get('title', '')} {post.get('text', '')}".lower()
         
-        if any(kw in text for kw in ['injury', 'injured', 'fitness']):
+        if any(word in text for word in ['injury', 'injured', 'hurt', 'out']):
             categories.append('injury')
-        if any(kw in text for kw in ['lineup', 'starting xi', 'team news']):
+        if any(word in text for word in ['lineup', 'starting', 'formation']):
             categories.append('lineup')
-        if any(kw in text for kw in ['form', 'momentum', 'confidence']):
+        if any(word in text for word in ['form', 'streak', 'run']):
             categories.append('form')
-        if any(kw in text for kw in ['weather', 'pitch', 'condition']):
+        if any(word in text for word in ['weather', 'rain', 'wind', 'conditions']):
             categories.append('weather')
-        if any(kw in text for kw in ['odds', 'value', 'edge', 'bet']):
-            categories.append('betting')
+        if any(word in text for word in ['odds', 'betting', 'bookmaker']):
+            categories.append('betting_market')
             
         return categories
     
-    def predict(self, post: Dict) -> Tuple[float, Dict[str, float]]:
-        """Predict reliability of a signal"""
+    def predict(self, post):
+        # predict reliability score for a post
+        self.eval()
         features = self.extract_features(post)
-        probability = self.model.predict(features)[0][0]
         
-        # Feature importance
-        importance = dict(zip(['user_age_days', 'user_karma', 'post_length', 'has_links', 'historical_accuracy', 'category_count', 'keyword_density'], features[0]))
+        with torch.no_grad():
+            features_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(self.device)
+            score = self.forward(features_tensor).item()
         
-        return probability, importance
+        # get category breakdown too
+        categories = self._extract_categories(post)
+        category_scores = {cat: 0.8 if cat in categories else 0.2 for cat in ['injury', 'lineup', 'form', 'weather', 'betting_market']}
+        
+        return score, category_scores
     
-    def update_historical_data(self, user_id: str, was_correct: bool):
-        """Update historical accuracy for a user"""
-        if user_id not in self.historical_data:
-            self.historical_data[user_id] = 0.5
-        
-        # Update with exponential moving average
-        alpha = 0.1
-        self.historical_data[user_id] = (1 - alpha) * self.historical_data[user_id] + alpha * was_correct
+    def update_historical_data(self, user_id, was_correct):
+        # track user reliability over time - simple running average for now
+        # TODO: implement proper user tracking
+        pass
 
 class MarketMovementPredictor(nn.Module):
     def __init__(self):

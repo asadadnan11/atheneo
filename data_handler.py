@@ -13,10 +13,10 @@ class DataHandler:
         self.signals_file = 'data/test_pipeline/signals.json'
         self.tweets_file = 'data/test_pipeline/tweets.json'
         self.cache = {}
-        self.cache_timeout = 300  # 5 minutes cache timeout
+        self.cache_timeout = 300  # 5 min cache
         
     def cleanup_old_files(self):
-        """Clean up old files, keeping only the last 24 hours"""
+        # clean up old files to save space - keep only last 24h
         try:
             now = datetime.now()
             for file_type in ['matches_', 'odds_', 'signals_', 'tweets_']:
@@ -24,14 +24,14 @@ class DataHandler:
                     if file.startswith(file_type):
                         file_path = os.path.join('data/history', file)
                         file_time = datetime.fromtimestamp(os.path.getctime(file_path))
-                        if (now - file_time).days >= 1:  # Keep only last 24 hours
+                        if (now - file_time).days >= 1:  # only keep last day
                             os.remove(file_path)
         except Exception as e:
             print(f"Error cleaning up old files: {str(e)}")
         
     @functools.lru_cache(maxsize=32)
     def get_matches(self, time_range="Last 24 Hours"):
-        """Get matches based on time range with caching"""
+        # get matches with caching - speeds things up
         if not os.path.exists(self.matches_file):
             return pd.DataFrame()
             
@@ -42,10 +42,10 @@ class DataHandler:
         if df.empty:
             return df
             
-        # Convert timestamp to datetime
+        # convert timestamp 
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         
-        # Filter by time range
+        # filter by time range
         now = datetime.now()
         if time_range == "Last Hour":
             cutoff = now - timedelta(hours=1)
@@ -54,24 +54,24 @@ class DataHandler:
         elif time_range == "Last 24 Hours":
             cutoff = now - timedelta(hours=24)
         else:
-            cutoff = now - timedelta(days=7)  # Default to 7 days
+            cutoff = now - timedelta(days=7)  # fallback to 7 days
             
         return df[df['timestamp'] >= cutoff]
     
     @functools.lru_cache(maxsize=32)
     def get_team_matches(self, team, time_range="Last 24 Hours"):
-        """Get matches for a specific team with caching"""
+        # get matches for specific team
         df = self.get_matches(time_range)
         if df.empty:
             return df
             
-        # Filter by team (case insensitive)
+        # search in title and text - case insensitive
         return df[df['title'].str.contains(team, case=False) | 
                  df['text'].str.contains(team, case=False)]
     
     @functools.lru_cache(maxsize=32)
     def get_sentiment_stats(self, time_range="Last 24 Hours"):
-        """Get sentiment statistics with caching"""
+        # get sentiment breakdown with caching
         df = self.get_matches(time_range)
         if df.empty:
             return {'positive': 0, 'neutral': 0, 'negative': 0}
@@ -85,7 +85,7 @@ class DataHandler:
     
     @functools.lru_cache(maxsize=32)
     def get_signals(self):
-        """Get processed signals with caching"""
+        # load processed signals
         if not os.path.exists(self.signals_file):
             return []
             
@@ -94,7 +94,7 @@ class DataHandler:
     
     @functools.lru_cache(maxsize=32)
     def get_tweets(self):
-        """Get tweet summaries with caching"""
+        # load tweet summaries
         if not os.path.exists(self.tweets_file):
             return []
             
@@ -103,12 +103,12 @@ class DataHandler:
     
     @functools.lru_cache(maxsize=32)
     def get_team_signals(self, team):
-        """Get signals for a specific team with caching"""
+        # get signals for specific team only
         signals = self.get_signals()
         return [s for s in signals if s.get('team', '').lower() == team.lower()]
     
     def get_metrics(self):
-        """Get dashboard metrics"""
+        # dashboard metrics calculation
         df = self.get_matches()
         signals = self.get_signals()
         
@@ -120,12 +120,12 @@ class DataHandler:
                 'signal_strength': 0
             }
             
-        positive_signals = len([s for s in signals if s.get('signal') == 'positive'])
-        negative_signals = len([s for s in signals if s.get('signal') == 'negative'])
+        pos_signals = len([s for s in signals if s.get('signal') == 'positive'])
+        neg_signals = len([s for s in signals if s.get('signal') == 'negative'])
         
         return {
             'total_matches': len(df),
-            'positive_signals': positive_signals,
-            'negative_signals': negative_signals,
-            'signal_strength': int((positive_signals + negative_signals) / len(signals) * 100) if signals else 0
+            'positive_signals': pos_signals,
+            'negative_signals': neg_signals,
+            'signal_strength': int((pos_signals + neg_signals) / len(signals) * 100) if signals else 0
         } 
