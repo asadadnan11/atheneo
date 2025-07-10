@@ -1,29 +1,29 @@
-# Atheneo: AI-Powered Sportbooks Insights
+# Atheneo: AI-Powered Sports Sentiment & Market Analysis
 
 ## Overview
-Atheneo is a comprehensive system that combines Reddit sentiment analysis with betting market data to identify potential betting opportunities. Developed as a graduate-level machine learning project, it processes social media signals, matches them with market gaps, and generates actionable insights using advanced sportsbook metrics. The system includes a Streamlit app for visualizing insights and sentiment analysis.
+Atheneo is a comprehensive system that combines Reddit sentiment analysis with sports market data to identify market sentiment patterns and opportunities. Developed as a graduate-level machine learning project, it processes social media signals, matches them with market movements, and generates actionable insights using advanced sports analytics. The system includes a Streamlit app for visualizing insights and sentiment analysis.
 
 ### Project Performance (Simulation Results)
 - **Data Processing**: Handles 500+ Reddit posts daily across 9 European football leagues
 - **Team Recognition**: Achieves >90% accuracy in identifying team mentions (validated on 1000+ test posts)
-- **Analysis Speed**: Reduces manual signal analysis from hours to minutes through automation
+- **Analysis Speed**: Reduces manual sentiment analysis from hours to minutes through automation
 - **Visualization**: Features 6+ interactive visualizations tracking 20+ teams simultaneously
 
 ## Features
 
-### 1. Real-time Betting Insights Dashboard
+### 1. Real-time Market Sentiment Dashboard
 - **Overview Metrics**: Total signals, active matches, and confidence scores
 - **Sentiment Distribution**: Visual breakdown of soccer related sentiments on subreddits (strongly positive to strongly negative)
 - **Team Analysis**: Track trending teams and market sentiment
-- **Latest Tips**: Real-time betting recommendations with match details
+- **Latest Insights**: Real-time market sentiment recommendations with match details
 
 ### 2. Advanced Sentiment Analysis
 - **Multi-level Classification**: 
-  - Strongly Positive: High confidence value bets
-  - Positive: Good betting opportunities
+  - Strongly Positive: High confidence positive sentiment
+  - Positive: Good sentiment opportunities
   - Neutral: Balanced or unclear signals
-  - Negative: Poor value or high risk
-  - Strongly Negative: Strong avoid signals
+  - Negative: Poor sentiment or high risk
+  - Strongly Negative: Strong negative sentiment signals
 - **Confidence Scoring**: 
   - Automated confidence assessment (0-1 scale)
   - Based on signal strength and market consensus
@@ -36,18 +36,18 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
 
 ### 4. Data Collection & Processing
 - **Reddit Integration**: 
-  - Monitors key subreddits for sportsbook lines signals
+  - Monitors key subreddits for sports sentiment signals
   - Tracks team news, injuries, and lineups
-  - Filters relevant betting discussions
+  - Filters relevant sports discussions
 - **Signal Processing**:
   - Team identification using pattern matching
-  - Odds matching with current markets
+  - Market data matching with current conditions
   - Signal validation and reliability scoring
-- **Betting Analysis**:
-  - Real-time odds aggregation via API
+- **Market Analysis**:
+  - Real-time market data aggregation via API
   - Implied probability calculations
   - Expected value analysis
-  - Kelly Criterion for optimal staking
+  - Risk assessment for market movements
 
 ## Getting Started
 
@@ -106,13 +106,13 @@ Atheneo is a comprehensive system that combines Reddit sentiment analysis with b
 - View trending teams and market movement
 - Analyze historical patterns
 
-### Tweets Tab
-- See latest betting recommendations
+### Insights Tab
+- See latest market sentiment recommendations
 - View detailed match information
 - Track confidence levels and reasoning
 
 ## Configuration
-- `config.py`: Adjust betting metrics and thresholds
+- `config.py`: Adjust sentiment metrics and thresholds
 - `team_aliases.py`: Customize team identification patterns
 - `.env`: Set up API credentials and environment variables
 - `.streamlit/config.toml`: Customize Streamlit app appearance
@@ -151,7 +151,7 @@ MIT License
 2. Add signal reliability scoring
 3. Develop market movement prediction
 4. Enhance sentiment analysis
-5. Optimize bet sizing
+5. Optimize risk assessment
 6. Add strategy adaptation
 
 ## Support
